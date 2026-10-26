@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
+  try {
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category") || undefined;
   const search = searchParams.get("search") || undefined;
@@ -12,6 +14,10 @@ export async function GET(req: Request) {
     include: { entrepreneur: { select: { businessName: true, location: true } } },
   });
   return Response.json(places);
+  } catch (e) {
+    console.error("GET /api/places failed", e);
+    return Response.json({ error: "Server xətası" }, { status: 500 });
+  }
 }
 export async function POST(req: Request) {
   try {

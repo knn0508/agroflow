@@ -13,10 +13,19 @@ export async function POST(req: Request) {
       return Response.json({ error: "Fayl tapılmadı" }, { status: 400 });
     }
 
+    const urls: string[] = [];
+
+    // Vercel's filesystem is read-only: inline images as data URLs instead.
+    if (process.env.VERCEL) {
+      for (const file of files) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        urls.push(`data:${file.type || "image/jpeg"};base64,${buffer.toString("base64")}`);
+      }
+      return Response.json({ urls }, { status: 200 });
+    }
+
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     await mkdir(uploadDir, { recursive: true });
-
-    const urls: string[] = [];
 
     for (const file of files) {
       const ext = path.extname(file.name || "") || ".jpg";
