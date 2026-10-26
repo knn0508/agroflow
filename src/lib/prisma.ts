@@ -4,10 +4,24 @@ import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pool?: Pool };
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  console.error("DATABASE_URL is not set — add it in Vercel → Settings → Environment Variables");
+// DATABASE_URL locally; Vercel's Supabase integration provides POSTGRES_* instead.
+const rawUrl =
+  process.env.DATABASE_URL ?? process.env.POSTGRES_PRISMA_URL ?? process.env.POSTGRES_URL;
+if (!rawUrl) {
+  console.error("No database URL set (DATABASE_URL / POSTGRES_PRISMA_URL / POSTGRES_URL)");
 }
+// Drop sslmode/pgbouncer/supa params: TLS is configured explicitly below.
+function cleanUrl(url?: string) {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    for (const k of ["sslmode", "pgbouncer", "supa"]) u.searchParams.delete(k);
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
+const connectionString = cleanUrl(rawUrl);
 
 // Local Postgres usually has no TLS; hosted DBs (Supabase/Neon) need it.
 const isLocal = !connectionString || /@(localhost|127\.0\.0\.1)[:/]/.test(connectionString);
