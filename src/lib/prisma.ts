@@ -4,11 +4,17 @@ import { Pool } from "pg";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient; pool?: Pool };
 
-// DATABASE_URL locally; Vercel's Supabase integration provides POSTGRES_* instead.
-const rawUrl =
-  process.env.DATABASE_URL ?? process.env.POSTGRES_PRISMA_URL ?? process.env.POSTGRES_URL;
+// DATABASE_URL locally; Vercel integrations (Supabase / Prisma Postgres) set POSTGRES_* or
+// PRISMA_DATABASE_URL. Pick the first plain postgres:// URL (the pg adapter can't use
+// prisma+postgres:// Accelerate URLs).
+const rawUrl = [
+  process.env.DATABASE_URL,
+  process.env.POSTGRES_URL,
+  process.env.POSTGRES_PRISMA_URL,
+  process.env.POSTGRES_URL_NON_POOLING,
+].find((u) => u && /^postgres(ql)?:\/\//.test(u));
 if (!rawUrl) {
-  console.error("No database URL set (DATABASE_URL / POSTGRES_PRISMA_URL / POSTGRES_URL)");
+  console.error("No postgres:// URL found in DATABASE_URL / POSTGRES_URL / POSTGRES_PRISMA_URL");
 }
 // Drop sslmode/pgbouncer/supa params: TLS is configured explicitly below.
 function cleanUrl(url?: string) {
